@@ -80,3 +80,24 @@ CREATE TABLE stock_ledger (
     created_by VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
+## 📂 Folder Structure
+
+```text
+CoreInventoryApp/
+│
+├── backend/                  # Node.js Server & Database Logic
+│   ├── .env                  # Environment variables (Ignored by Git)
+│   ├── db.js                 # PostgreSQL connection setup
+│   ├── middleware.js         # JWT Security checks
+│   ├── package.json          # Backend dependencies
+│   ├── routes.js             # API Endpoints
+│   └── server.js             # Main server entry point
+│
+├── frontend/                 # User Interface
+│   └── index.html            # Main App HTML, CSS, and JS
+│
+├── .gitignore                # Tells Git which files to hide
+└── README.md                 # Project documentation
+```
