@@ -82,9 +82,7 @@ CREATE TABLE stock_ledger (
 );
 
 
-## 📂 Folder Structure
-
-```text
+STRUCTURE:-
 CoreInventoryApp/
 │
 ├── backend/                  # Node.js Server & Database Logic
