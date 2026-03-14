@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CoreInventory – full operations + PDF (logs enabled)</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* (all styles identical to previous working version – kept for brevity) */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      min-height: 100vh;
+      background: #0d0d0d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .split-container {
+      display: flex;
+      width: 100%;
+      max-width: 1200px;
+      height: 92vh;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+    .left-panel {
+      flex: 1;
+      min-width: 45%;
+      background: linear-gradient(135deg, #2c0f14 0%, #3d1a22 50%, #2c0f14 100%);
+      padding: 60px 50px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      color: #f5e9e9;
+      min-height: 100%;
+    }
+    .logo {
+      font-size: 3.6rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      letter-spacing: -1px;
+    }
+    .logo span {
+      color: #d32f2f;
+    }
+    .tagline {
+      font-size: 1.25rem;
+      opacity: 0.92;
+      margin: 12px 0 20px;
+      line-height: 1.45;
+    }
+    .features-slider {
+      width: 100%;
+      height: 160px;
+      overflow: hidden;
+      position: relative;
+      margin-top: 30px;
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 16px;
+      border: 1px solid rgba(211, 47, 47, 0.2);
+    }
+    .slider-track {
+      display: flex;
+      width: 500%;
+      height: 100%;
+      animation: slideTrack 20s infinite cubic-bezier(0.77, 0, 0.175, 1);
+    }
+    .slide {
+      width: 20%;
+      height: 100%;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 20px 30px; 
+    }
+    .slide i {
+      font-size: 2.2rem;
+      color: #d32f2f;
+      margin-bottom: 12px;
+    }
+    .slide h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .slide p {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.85);
+      line-height: 1.4;
+    }
+    @keyframes slideTrack {
+      0%, 15%   { transform: translateX(0); }
+      20%, 35%  { transform: translateX(-20%); }
+      40%, 55%  { transform: translateX(-40%); }
+      60%, 75%  { transform: translateX(-60%); }
+      80%, 95%  { transform: translateX(-80%); }
+      100%      { transform: translateX(0); }
+    }
+    .right-panel {
+      flex: 1;
+      min-width: 55%;
+      background: #f8f5f2;
+      color: #2c2c2c;
+      padding: 60px 70px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow-y: auto;
+      min-height: 100%;
+    }
+    h2 {
+      font-size: 2.1rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .subtitle {
+      font-size: 1.05rem;
+      opacity: 0.8;
+      margin-bottom: 40px;
+    }
+    .form-group {
+      margin-bottom: 28px;
+    }
+    label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #444;
+    }
+    input, .role-card, .info-note, select, textarea {
+      width: 100%;
+      padding: 14px 18px;
+      font-size: 1.05rem;
+      border: 1px solid #d0c8c0;
+      border-radius: 10px;
+      background: #fff;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #d32f2f;
+      box-shadow: 0 0 0 3px rgba(211,47,47,0.15);
+    }
+    .password-wrapper {
+      position: relative;
+    }
+    .password-wrapper i {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #777;
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+    .role-selector {
+      display: flex;
+      gap: 0;
+      margin: 10px 0 10px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      background: white;
+    }
+    .role-card {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: #555;
+      font-weight: 500;
+      position: relative;
+      font-size: 0.95rem;
+    }
+    .role-card::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: transparent;
+      transition: background 0.3s ease;
+    }
+    .role-card i {
+      font-size: 32px;
+      color: #999;
+      transition: color 0.3s ease;
+      margin-bottom: 4px;
+    }
+    .role-card span {
+      font-size: 1.1rem;
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+    .role-card.active {
+      color: #d32f2f;
+      background: #fff4f0;
+    }
+    .role-card.active i {
+      color: #d32f2f;
+    }
+    .role-card.active::before {
+      background: #d32f2f;
+    }
+    .role-card:hover:not(.active) {
+      background: #f8f5f2;
+      color: #777;
+    }
+    .role-card:hover:not(.active) i {
+      color: #d32f2f;
+    }
+    .role-label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #888;
+      text-align: center;
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+    .info-note {
+      background: #fceaea;
+      border: 1px solid #d32f2f;
+      color: #2c0f14;
+      text-align: center;
+      font-weight: 500;
+      margin: 20px 0 15px;
+    }
+    .btn-signin {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: white;
+      background: #d32f2f;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin: 24px 0 16px;
+    }
+    .btn-signin:hover {
+      background: #b71c1c;
+    }
+    .forgot, .register, .otp-row {
+      text-align: center;
+      font-size: 0.95rem;
+      color: #555;
+      margin-top: 12px;
+    }
+    .forgot a, .register a, .otp-row span {
+      color: #d32f2f;
+      text-decoration: none;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .otp-row {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 20px;
+    }
+    /* --- MAIN APP --- */
+    .app {
+      width: 1440px;
+      max-width: 100%;
+      min-height: 90vh;
+      background: #f8f5f2;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      overflow: hidden;
+      border: 1px solid #d0c8c0;
+    }
+    .sidebar {
+      background: linear-gradient(135deg, #2c0f14 0%, #3d1a22 100%);
+      padding: 32px 16px;
+      display: flex;
+      flex-direction: column;
+      color: #f5e9e9;
+      border-right: 2px solid #d32f2f;
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 45px;
+      padding-left: 12px;
+    }
+    .logo-icon-small {
+      background: #d32f2f;
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      color: #2c0f14;
+    }
+    .logo-text-small {
+      font-weight: 800;
+      font-size: 24px;
+      color: #f5e9e9;
+    }
+    .logo-text-small span {
+      color: #d32f2f;
+    }
+    .nav {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 10px;
+    }
+    .nav-label {
+      color: #ffb6b6;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin: 16px 0 8px 20px;
+      text-transform: uppercase;
+    }
+    .nav-item, .sub-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 15px;
+      color: rgba(255,255,255,0.8);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      width: 100%;
+    }
+    .nav-item i, .sub-item i {
+      width: 24px;
+      font-size: 1.25rem;
+      color: #d32f2f;
+      text-align: center;
+    }
+    .nav-item.active, .sub-item.active {
+      background: rgba(211,47,47,0.25);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .nav-item.active i, .sub-item.active i {
+      color: white;
+    }
+    .nav-item:hover:not(.active), .sub-item:hover:not(.active) {
+      background: rgba(211,47,47,0.15);
+      transform: translateX(6px);
+    }
+    .sub-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-left: 20px;
+      padding-left: 10px;
+      border-left: 1px dashed rgba(255, 255, 255, 0.2);
+    }
+    .sub-item {
+      padding: 10px 16px;
+      font-size: 14px;
+    }
+    .profile-section {
+      margin-top: 30px;
+      border-top: 2px solid #d32f2f40;
+      padding-top: 24px;
+    }
+    .profile-menu {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 14px 18px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 50px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .profile-menu:hover {
+      background: rgba(211,47,47,0.3);
+    }
+    .avatar {
+      width: 52px;
+      height: 52px;
+      background: #d32f2f;
+      border-radius: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 24px;
+      color: #2c0f14;
+    }
+    .profile-name { font-weight: 700; font-size: 18px; color: white; }
+    .profile-action { font-size: 14px; color: #ffb6b6; display: flex; gap: 18px; margin-top: 6px; }
+    .profile-action span { cursor: pointer; transition: 0.2s; }
+    .profile-action span:hover { color: white; }
+    .main {
+      padding: 36px 40px;
+      overflow-y: auto;
+      background: #f8f5f2;
+      -webkit-overflow-scrolling: touch;
+    }
+    .view-section { display: none; }
+    .view-section.active-section { display: block; }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 25px;
+      margin-bottom: 25px;
+    }
+    .kpi-card {
+      background: white;
+      padding: 24px 20px;
+      border-radius: 20px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.03);
+      border-bottom: 5px solid #d32f2f;
+      transition: 0.2s;
+    }
+    .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 15px 25px -5px #d32f2f60; }
+    .kpi-title { font-size: 14px; color: #555; margin-bottom: 10px; font-weight: 600; }
+    .kpi-value { font-size: 32px; font-weight: 800; color: #2c0f14; }
+    .demo-card {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.03);
+      margin-bottom: 25px;
+      border: 1px solid #e4dcd4;
+    }
+    .demo-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 18px;
+      color: #2c0f14;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .capacity-meter { margin-bottom: 15px; }
+    .meter-label { display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; color: #555; }
+    .meter-bar { width: 100%; height: 10px; background: #e0d8d0; border-radius: 10px; overflow: hidden; }
+    .meter-fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
+    .audit-log { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+    .audit-log li { font-size: 0.9rem; color: #444; border-left: 3px solid #d32f2f; padding-left: 12px; line-height: 1.4; background: #faf8f5; padding-top: 8px; padding-bottom: 8px; border-radius: 0 6px 6px 0; }
+    .audit-log .time { font-size: 0.75rem; color: #888; display: block; margin-bottom: 2px; font-weight: 600; text-transform: uppercase; }
+    .btn {
+      background: #d32f2f;
+      border: none;
+      color: white;
+      padding: 14px 32px;
+      border-radius: 40px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.2s;
+      border: 1px solid transparent;
+    }
+    .btn:hover { background: #b71c1c; }
+    .btn-outline {
+      background: transparent;
+      border: 2px solid #d32f2f;
+      color: #d32f2f;
+    }
+    .btn-sm {
+      padding: 10px 20px;
+      font-size: 14px;
+    }
+    .badge {
+      background: #d32f2f;
+      color: white;
+      padding: 5px 18px;
+      border-radius: 40px;
+      font-size: 14px;
+      font-weight: 600;
+      display: inline-block;
+    }
+    .product-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+    }
+    .product-table th {
+      text-align: left;
+      padding: 8px 15px;
+      color: #2c0f14;
+      font-weight: 600;
+      font-size: 14px;
+      border-bottom: 1px solid #e0d8d0;
+    }
+    .product-table td {
+      background: #faf8f5;
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid #e0d8d0;
+    }
+    .move-history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .move-item {
+      background: white;
+      border-radius: 40px;
+      padding: 22px 28px;
+      display: flex;
+      justify-content: space-between;
+      border-left: 12px solid #d32f2f;
+      border: 1px solid #e0d8d0;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 40px;
+      padding: 40px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      border: 2px solid #d32f2f;
+    }
+    .modal-content h3 {
+      font-size: 28px;
+      margin-bottom: 25px;
+      color: #2c0f14;
+    }
+    .modal-content .form-group {
+      margin-bottom: 20px;
+    }
+    .modal-content label {
+      font-weight: 600;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 20px;
+      margin-top: 30px;
+    }
+    @media (max-width: 992px) {
+      .dashboard-grid-top, .dashboard-grid-bottom { grid-template-columns: 1fr !important; }
+    }
+    @media (max-width: 768px) {
+      body { padding: 10px; }
+      .split-container { flex-direction: column; height: auto; min-height: 80vh; }
+      .left-panel { min-width: auto; padding: 40px 30px; text-align: center; }
+      .logo { font-size: 2.5rem; }
+      .tagline { font-size: 1.1rem; margin: 8px 0 30px; }
+      .features-slider { display: none; }
+      .right-panel { min-width: auto; padding: 40px 30px; }
+      h2 { font-size: 1.8rem; }
+      .subtitle { font-size: 1rem; margin-bottom: 30px; }
+      .form-group { margin-bottom: 20px; }
+      .role-selector { flex-direction: column; }
+      .role-card { padding: 16px 20px; border-radius: 0; }
+      .role-card::before { height: 4px; }
+      .otp-row { flex-direction: column; gap: 10px; }
+      .app { grid-template-columns: 1fr; height: auto; min-height: 100vh; border-radius: 0; width: 100vw; max-width: none; }
+      .sidebar { position: fixed; top: 0; left: 0; width: 280px; height: 100vh; z-index: 999; transform: translateX(-100%); transition: transform 0.3s ease; }
+      .sidebar.open { transform: translateX(0); }
+      .main { padding: 20px; padding-top: 80px; margin-left: 0; width: 100%; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; }
+      .kpi-value { font-size: 32px; }
+      .product-table { font-size: 0.9rem; }
+      .product-table th, .product-table td { padding: 10px 8px; }
+      .move-item { flex-direction: column; gap: 10px; text-align: center; }
+      .modal-content { margin: 20px; padding: 30px 20px; width: calc(100% - 40px); border-radius: 20px; }
+      .modal-actions { flex-direction: column; }
+      .btn { width: 100%; }
+      .mobile-menu-toggle { display: block; position: fixed; top: 20px; left: 20px; z-index: 1000; background: #d32f2f; color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; }
+    }
+    @media (max-width: 480px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+      .profile-menu { flex-direction: column; gap: 10px; text-align: center; }
+      .profile-action { flex-direction: column; gap: 5px; }
+    }
+    .mobile-menu-toggle { display: none; }
+    .settings-grid { display: flex; flex-direction: column; gap: 25px; }
+    .settings-card { background: white; border-radius: 20px; padding: 25px; border: 1px solid #e4dcd4; }
+    .settings-card h3 { margin-bottom: 20px; color: #2c0f14; }
+    .setting-row { margin-bottom: 20px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .setting-row label { min-width: 180px; }
+    .setting-row input, .setting-row select { flex: 1; padding: 12px; }
+    .toggle-switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+    .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: #d32f2f; }
+    input:checked + .slider:before { transform: translateX(26px); }
+    .btn-save-settings { background: #2c0f14; color: white; border: none; padding: 14px 30px; border-radius: 40px; font-weight: 700; cursor: pointer; }
+    .btn-save-settings:hover { background: #4a1f2a; }
+  </style>
+</head>
+<body>
+  <!-- AUTH PANEL (unchanged) -->
+  <div id="authPanel" class="split-container">
+    <div class="left-panel">
+      <div class="logo">Core<span>Inventory</span></div>
+      <div class="tagline">Sign in to manage your inventory, track stock movements,<br>and stay on top of every transaction.</div>
+      <div class="features-slider">
+        <div class="slider-track">
+          <div class="slide"><i class="fa-solid fa-cubes"></i><h3>Real-time Tracking</h3><p>Monitor stock levels instantly across all your physical locations.</p></div>
+          <div class="slide"><i class="fa-solid fa-truck-fast"></i><h3>Automated Operations</h3><p>Seamlessly process incoming receipts and customer deliveries.</p></div>
+          <div class="slide"><i class="fa-solid fa-scale-balanced"></i><h3>Stock Adjustments</h3><p>Easily log audits, manage damages, and keep your ledgers accurate.</p></div>
+          <div class="slide"><i class="fa-solid fa-warehouse"></i><h3>Multi-Warehouse</h3><p>Initiate rapid internal transfers between production floors and storage.</p></div>
+          <div class="slide"><i class="fa-solid fa-file-pdf"></i><h3>Instant PDF Reports</h3><p>Generate downloadable, formatted PDF receipts and transaction records.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div id="loginSection">
+        <h2>Welcome back</h2>
+        <div class="subtitle">Sign in to your inventory dashboard.</div>
+        <div class="form-group"><label>EMAIL ADDRESS</label><input type="email" id="userid" placeholder="admin@coreinventory.com" value="admin@coreinventory.com"></div>
+        <div class="form-group"><label>PASSWORD</label><div class="password-wrapper"><input type="password" id="password" placeholder="••••••••" value="admin@123"><i class="fa-regular fa-eye" id="togglePassword"></i></div></div>
+        <div class="info-note"><i class="fas fa-info-circle"></i> Connected to PostgreSQL Backend</div>
+        <button class="btn-signin" id="loginBtn">Sign In →</button>
+        <div class="forgot"><a href="#" id="otpMock">Forgot password?</a></div>
+        <div class="register">Don't have an account? <a href="#" id="signupMock">Register here</a></div>
+        <div class="otp-row"><span id="signupMock2"><i class="fas fa-user-plus"></i> Sign up</span></div>
+      </div>
+      <div id="registerSection" style="display: none;">
+        <h2>Create Account</h2>
+        <div class="subtitle">Register to access the inventory system.</div>
+        <div class="form-group"><label>EMAIL ADDRESS</label><input type="email" id="regEmail" placeholder="newuser@coreinventory.com"></div>
+        <div class="form-group"><label>PASSWORD</label><div class="password-wrapper"><input type="password" id="regPassword" placeholder="••••••••"><i class="fa-regular fa-eye" id="toggleRegPassword"></i></div></div>
+        <label style="font-weight:600; margin-bottom:10px; display:block;">I am a ...</label>
+        <div class="role-selector">
+          <div class="role-card active" id="regRoleManager" data-role="manager"><i class="fas fa-user-tie"></i><span>Manager</span><div class="role-label">Full system access & oversight</div></div>
+          <div class="role-card" id="regRoleStaff" data-role="staff"><i class="fas fa-user-cog"></i><span>Warehouse Staff</span><div class="role-label">Daily operations & movements</div></div>
+        </div>
+        <button class="btn-signin" id="registerBtn">Register Account →</button>
+        <div class="register">Already have an account? <a href="#" id="backToLogin">Sign in here</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="mainApp" style="display: none; width:100%;">
+    <button class="mobile-menu-toggle" id="mobileToggle"><i class="fas fa-bars"></i></button>
+    <div class="app">
+      <div class="sidebar" id="sidebar">
+        <div class="logo-area"><div class="logo-icon-small"><i class="fas fa-cubes"></i></div><div class="logo-text-small">Core<span>Inventory</span></div></div>
+        <div class="nav">
+          <div class="nav-item active" data-view="dashboard"><i class="fas fa-th-large"></i> Dashboard</div>
+          <div class="nav-item" data-view="products"><i class="fas fa-boxes"></i> Products</div>
+          <div class="nav-label">Operations</div>
+          <div class="sub-nav">
+            <div class="sub-item" data-view="receipts"><i class="fas fa-download"></i> Receipts</div>
+            <div class="sub-item" data-view="deliveries"><i class="fas fa-truck"></i> Deliveries</div>
+            <div class="sub-item" data-view="adjustments"><i class="fas fa-scale-balanced"></i> Adjustments</div>
+            <div class="sub-item" data-view="transfers"><i class="fas fa-arrows-spin"></i> Transfers</div>
+          </div>
+          <div class="nav-item" data-view="movehistory"><i class="fas fa-history"></i> Move History</div>
+          <div class="nav-item" data-view="warehouse"><i class="fas fa-warehouse"></i> Warehouse</div>
+          <div class="nav-item" data-view="settings"><i class="fas fa-sliders-h"></i> Settings</div>
+        </div>
+        <div class="profile-section">
+          <div class="profile-menu">
+            <div class="avatar">U</div>
+            <div class="profile-text">
+              <div class="profile-name" id="displayRole">Manager</div>
+              <div class="profile-action"><span id="myProfileBtn"><i class="far fa-user"></i> My Profile</span><span id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="main">
+        <!-- DASHBOARD -->
+        <div id="dashboard" class="view-section active-section">
+          <div style="display:flex; gap:15px; margin-bottom: 25px; flex-wrap: wrap;">
+            <button class="btn btn-sm" id="btnDashReceipt"><i class="fas fa-download"></i> Quick Receipt</button>
+            <button class="btn btn-sm" id="btnDashDelivery"><i class="fas fa-truck"></i> Quick Delivery</button>
+            <button class="btn btn-sm btn-outline" id="btnDashAdjust"><i class="fas fa-scale-balanced"></i> Log Damage / Audit</button>
+          </div>
+          <div class="kpi-grid">
+            <div class="kpi-card"><div class="kpi-title">📦 Total Products</div><div class="kpi-value" id="totalProducts">0</div></div>
+            <div class="kpi-card"><div class="kpi-title">⚠️ Low / Out of Stock</div><div class="kpi-value" id="lowStockKpi" style="color:#d32f2f;">0</div></div>
+            <div class="kpi-card"><div class="kpi-title">⏳ Pending Receipts</div><div class="kpi-value">0</div></div>
+            <div class="kpi-card"><div class="kpi-title">🚚 Pending Deliveries</div><div class="kpi-value">0</div></div>
+            <div class="kpi-card"><div class="kpi-title">🔄 Total Logs</div><div class="kpi-value" id="totalLogs">0</div></div>
+          </div>
+          <div class="dashboard-grid-top" style="display: grid; grid-template-columns: 2fr 1fr; gap: 25px; margin-bottom: 25px;">
+            <div class="demo-card" style="margin-bottom:0;"><div class="demo-title"><i class="fas fa-chart-line" style="color:#d32f2f;"></i> Stock Movement (30 Days)</div><div style="height: 200px; width: 100%;"><canvas id="stockChart"></canvas></div></div>
+            <div class="demo-card" style="margin-bottom:0;"><div class="demo-title"><i class="fas fa-warehouse" style="color:#d32f2f;"></i> Warehouse Capacity</div>
+              <div class="capacity-meter"><div class="meter-label"><span>Main Store</span><span>78%</span></div><div class="meter-bar"><div class="meter-fill" style="width: 78%; background: #0277bd;"></div></div></div>
+              <div class="capacity-meter" style="margin-top: 20px;"><div class="meter-label"><span>Production Rack</span><span style="color:#d32f2f">92%</span></div><div class="meter-bar"><div class="meter-fill" style="width: 92%; background: #d32f2f;"></div></div></div>
+              <div class="capacity-meter" style="margin-top: 20px;"><div class="meter-label"><span>North Hub</span><span style="color:#2e7d32">35%</span></div><div class="meter-bar"><div class="meter-fill" style="width: 35%; background: #2e7d32;"></div></div></div>
+            </div>
+          </div>
+          <div class="dashboard-grid-bottom" style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+            <div class="demo-card" style="margin-bottom:0;"><div class="demo-title"><i class="fas fa-triangle-exclamation" style="color:#d32f2f;"></i> Critical Low Stock</div><table class="product-table"><thead><tr><th>Item</th><th>Current Stock</th><th>Action</th></tr></thead><tbody id="dashboardLowStock"></tbody></table></div>
+            <div class="demo-card" style="margin-bottom:0;"><div class="demo-title"><i class="fas fa-shield-halved" style="color:#d32f2f;"></i> Security & Governance Log</div><ul class="audit-log" id="dashboardAuditLog"></ul></div>
+          </div>
+        </div>
+        
+        <!-- PRODUCTS -->
+        <div id="products" class="view-section">
+          <h2><i class="fas fa-boxes"></i> Product Management</h2>
+          <div style="display: flex; gap: 20px; margin-bottom: 30px;"><button class="btn" id="openCreateProductModal"><i class="fas fa-plus"></i> Create Product</button></div>
+          <table class="product-table" id="productTable"><thead><tr><th>Name / SKU</th><th>Category</th><th>Unit</th><th>Stock per location</th><th>Reorder rule</th><th></th></tr></thead><tbody id="productTableBody"></tbody></table>
+        </div>
+
+        <!-- RECEIPTS -->
+        <div id="receipts" class="view-section">
+          <h2><i class="fas fa-download"></i> Receipts (Incoming Stock)</h2>
+          <button class="btn" id="openReceiptModal"><i class="fas fa-plus"></i> Create Receipt</button>
+          <div class="demo-card" style="margin-top:30px;">
+            <div class="demo-title"><i class="fas fa-clipboard-list"></i> Recent Receipts</div>
+            <div id="receiptsListContainer"><table class="product-table"><thead><tr><th>Date</th><th>Product</th><th>Quantity</th><th>Supplier</th><th>Location</th></tr></thead><tbody id="receiptsTableBody"><tr><td colspan="5" style="text-align:center;">No receipts yet</td></tr></tbody></table></div>
+          </div>
+          <div class="demo-card"><p><strong>Process:</strong> 1. Create receipt → 2. Add supplier & products → 3. Input quantities → 4. Validate → stock increases.</p><p><strong>Example:</strong> Receive 50 units of "Steel Rods" → stock +50</p></div>
+        </div>
+
+        <!-- DELIVERIES -->
+        <div id="deliveries" class="view-section">
+          <h2><i class="fas fa-truck"></i> Delivery Orders</h2>
+          <button class="btn" id="openDeliveryModal"><i class="fas fa-plus"></i> Create Delivery</button>
+          <div class="demo-card" style="margin-top:30px;"><p><strong>Process:</strong> 1. Pick items → 2. Pack items → 3. Validate → stock decreases.</p><p><strong>Example:</strong> Sales order for 10 chairs → Delivery reduces chairs by 10.</p></div>
+        </div>
+
+        <!-- ADJUSTMENTS -->
+        <div id="adjustments" class="view-section">
+          <h2><i class="fas fa-scale-balanced"></i> Stock Adjustments</h2>
+          <button class="btn" id="openAdjustmentModal"><i class="fas fa-plus"></i> New Adjustment</button>
+          <div class="demo-card" style="margin-top:30px;"><p><strong>Steps:</strong> Select product/location → enter counted quantity → system auto-updates and logs.</p></div>
+        </div>
+
+        <!-- TRANSFERS -->
+        <div id="transfers" class="view-section">
+          <h2><i class="fas fa-arrows-spin"></i> Internal Transfers</h2>
+          <button class="btn" id="openTransferModal"><i class="fas fa-plus"></i> New Transfer</button>
+          <div class="demo-card" style="margin-top:30px;"><p><strong>Example moves:</strong> Main Store → Production Rack</p><p>Each movement logged in ledger.</p></div>
+        </div>
+
+        <!-- MOVE HISTORY -->
+        <div id="movehistory" class="view-section">
+          <h2><i class="fas fa-history"></i> Stock Ledger (Move History)</h2>
+          <div class="move-history-list" id="moveHistoryList"></div>
+        </div>
+
+        <!-- WAREHOUSE -->
+        <div id="warehouse" class="view-section">
+          <h2><i class="fas fa-warehouse"></i> Multi‑warehouse</h2>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+            <div class="demo-card"><i class="fas fa-warehouse" style="color:#d32f2f;"></i><h3>Main Store</h3><p>Aisle A, Rack 1-10 · capacity 78%</p></div>
+            <div class="demo-card"><i class="fas fa-warehouse" style="color:#d32f2f;"></i><h3>Production Rack</h3><p>Rack P1, P2 · capacity 45%</p></div>
+          </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="settings" class="view-section">
+          <h2><i class="fas fa-sliders-h"></i> Settings</h2>
+          <div class="settings-grid">
+            <div class="settings-card">
+              <h3>Company Preferences</h3>
+              <div class="setting-row"><label>Company Name</label><input type="text" id="companyName" placeholder="CoreInventory Inc." value="CoreInventory Inc."></div>
+              <div class="setting-row"><label>Default Warehouse</label><select id="defaultWarehouse"><option>Main Store</option><option>Production Rack</option><option>North Hub</option></select></div>
+              <div class="setting-row"><label>Low Stock Threshold (global)</label><input type="number" id="globalThreshold" min="0" value="10"></div>
+              <div class="setting-row"><label>Email Notifications</label><label class="toggle-switch"><input type="checkbox" id="emailNotify" checked><span class="slider"></span></label></div>
+              <div class="setting-row"><label>Language</label><select id="language"><option>English</option><option>Spanish</option><option>French</option></select></div>
+              <button class="btn-save-settings" id="saveSettingsBtn"><i class="fas fa-save"></i> Save Settings</button>
+            </div>
+            <div class="settings-card"><h3>Warehouse Capacity Alerts</h3><div class="setting-row"><label>Alert when capacity exceeds</label><input type="number" id="capacityAlert" value="85" min="0" max="100"> %</div><p style="color:#888; font-size:0.9rem;">You'll be notified when warehouse usage goes above this percentage.</p></div>
+          </div>
+        </div>
+
+        <!-- PROFILE -->
+        <div id="profileView" class="view-section">
+          <h2><i class="far fa-user"></i> My Profile</h2>
+          <div class="demo-card"><div style="display: flex; gap: 30px;"><div class="avatar" style="width:80px; height:80px; font-size:40px;">U</div><div><h3>System User</h3><p><span id="roleInProfile">Manager</span></p></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALS -->
+  <div id="productModal" class="modal"><div class="modal-content"><h3><i class="fas fa-plus"></i> Create Product</h3><div class="form-group"><label>Product Name</label><input type="text" id="prodName" placeholder="e.g. Steel Rods"></div><div class="form-group"><label>SKU / Code</label><input type="text" id="prodSKU" placeholder="ST-001"></div><div class="form-group"><label>Category</label><input type="text" id="prodCategory" placeholder="Raw material"></div><div class="form-group"><label>Unit of Measure</label><input type="text" id="prodUnit" placeholder="kg, pcs, etc."></div><div class="form-group"><label>Initial Stock (optional)</label><input type="number" id="prodStock" value="0" min="0"></div><div class="form-group"><label>Reorder rule (min quantity)</label><input type="number" id="prodReorder" value="10"></div><div class="modal-actions"><button class="btn" id="saveProductBtn">Save Product</button><button class="btn btn-outline" id="closeProductModal">Cancel</button></div></div></div>
+
+  <div id="receiptModal" class="modal"><div class="modal-content"><h3><i class="fas fa-download"></i> Create Receipt</h3><div class="form-group"><label>Supplier</label><input type="text" id="receiptSupplier" placeholder="ABC Corp"></div><div class="form-group"><label>Product</label><select id="receiptProduct"></select></div><div class="form-group"><label>Quantity received</label><input type="number" id="receiptQty" min="1" value="1"></div><div class="form-group"><label>Location</label><select id="receiptLocation"><option>Main Store</option><option>Production Rack</option></select></div><div class="modal-actions"><button class="btn" id="validateReceiptBtn">Validate & Increase Stock</button><button class="btn btn-outline" id="closeReceiptModal">Cancel</button></div><div style="margin-top:20px; display:none;" id="receiptPdfSection"><button class="btn btn-outline" id="generateReceiptPDF"><i class="fas fa-file-pdf"></i> Generate Official PDF</button></div></div></div>
+
+  <div id="deliveryModal" class="modal"><div class="modal-content"><h3><i class="fas fa-truck"></i> Create Delivery</h3><div class="form-group"><label>Customer / Order</label><input type="text" id="deliveryCustomer" placeholder="Customer order #123"></div><div class="form-group"><label>Product</label><select id="deliveryProduct"></select></div><div class="form-group"><label>Quantity to deliver</label><input type="number" id="deliveryQty" min="1" value="1"></div><div class="form-group"><label>From Location</label><select id="deliveryLocation"><option>Main Store</option><option>Production Rack</option></select></div><div class="modal-actions"><button class="btn" id="validateDeliveryBtn">Validate & Decrease Stock</button><button class="btn btn-outline" id="closeDeliveryModal">Cancel</button></div></div></div>
+
+  <div id="adjustmentModal" class="modal"><div class="modal-content"><h3><i class="fas fa-scale-balanced"></i> Stock Adjustment</h3><div class="form-group"><label>Product</label><select id="adjustProduct"></select></div><div class="form-group"><label>Location</label><select id="adjustLocation"><option>Main Store</option><option>Production Rack</option></select></div><div class="form-group"><label>Counted quantity</label><input type="number" id="adjustCount" min="0" value="0"></div><div class="modal-actions"><button class="btn" id="validateAdjustBtn">Apply Adjustment</button><button class="btn btn-outline" id="closeAdjustModal">Cancel</button></div></div></div>
+
+  <div id="transferModal" class="modal"><div class="modal-content"><h3><i class="fas fa-arrows-spin"></i> Internal Transfer</h3><div class="form-group"><label>Product</label><select id="transferProduct"></select></div><div class="form-group"><label>From Location</label><select id="transferFrom"><option>Main Store</option><option>Production Rack</option></select></div><div class="form-group"><label>To Location</label><select id="transferTo"><option>Production Rack</option><option>Main Store</option></select></div><div class="form-group"><label>Quantity</label><input type="number" id="transferQty" min="1" value="1"></div><div class="modal-actions"><button class="btn" id="validateTransferBtn">Transfer</button><button class="btn btn-outline" id="closeTransferModal">Cancel</button></div></div></div>
+
+  <script>
+    (function() {
+      // ========== ENABLE LOGS FOR ALL OPERATIONS ==========
+      const API_URL = "http://localhost:5000/api";
+      const token = localStorage.getItem('inventory_token');
+      
+      // Local database with demo products and ledger entries
+      let localDB = {
+        products: [
+          { id: 'p1', name: 'Steel Rods', sku: 'ST-001', category: 'Raw material', unit: 'kg', reorder_rule: 10, stock: { 'Main Store': 45, 'Production Rack': 12 } },
+          { id: 'p2', name: 'Aluminum Sheets', sku: 'AL-002', category: 'Raw material', unit: 'pcs', reorder_rule: 5, stock: { 'Main Store': 8, 'Production Rack': 20 } },
+          { id: 'p3', name: 'Chair Legs', sku: 'CH-003', category: 'Components', unit: 'pcs', reorder_rule: 15, stock: { 'Main Store': 30, 'Production Rack': 5 } }
+        ],
+        ledger: [
+          { id: 'l1', time: new Date(Date.now() - 86400000).toISOString(), type: 'Receipt', desc: 'Receipt from ABC Corp: +50 to Main Store', productId: 'p1', location: 'Main Store', status: 'Done' },
+          { id: 'l2', time: new Date(Date.now() - 172800000).toISOString(), type: 'Delivery', desc: 'Delivery to Customer: -10 from Production Rack', productId: 'p3', location: 'Production Rack', status: 'Done' },
+          { id: 'l3', time: new Date(Date.now() - 259200000).toISOString(), type: 'Transfer', desc: 'Transfer 5 units: Main Store -> Production Rack', productId: 'p2', location: 'Main Store', targetLocation: 'Production Rack', status: 'Done' }
+        ]
+      };
+
+      let globalProducts = [...localDB.products];
+
+      // ========== AUTH UI ==========
+      const authPanel = document.getElementById('authPanel');
+      const mainApp = document.getElementById('mainApp');
+      const loginSection = document.getElementById('loginSection');
+      const registerSection = document.getElementById('registerSection');
+      let regSelectedRole = 'manager';
+
+      document.getElementById('signupMock').addEventListener('click', (e) => { e.preventDefault(); loginSection.style.display = 'none'; registerSection.style.display = 'block'; });
+      document.getElementById('signupMock2').addEventListener('click', (e) => { e.preventDefault(); loginSection.style.display = 'none'; registerSection.style.display = 'block'; });
+      document.getElementById('backToLogin').addEventListener('click', (e) => { e.preventDefault(); registerSection.style.display = 'none'; loginSection.style.display = 'block'; });
+
+      document.getElementById('togglePassword').addEventListener('click', function() { const i = document.getElementById('password'); i.type = i.type === 'password' ? 'text' : 'password'; this.classList.toggle('fa-eye'); this.classList.toggle('fa-eye-slash'); });
+      document.getElementById('toggleRegPassword').addEventListener('click', function() { const i = document.getElementById('regPassword'); i.type = i.type === 'password' ? 'text' : 'password'; this.classList.toggle('fa-eye'); this.classList.toggle('fa-eye-slash'); });
+
+      document.getElementById('regRoleManager').addEventListener('click', () => { document.getElementById('regRoleManager').classList.add('active'); document.getElementById('regRoleStaff').classList.remove('active'); regSelectedRole = 'manager'; });
+      document.getElementById('regRoleStaff').addEventListener('click', () => { document.getElementById('regRoleStaff').classList.add('active'); document.getElementById('regRoleManager').classList.remove('active'); regSelectedRole = 'staff'; });
+
+      document.getElementById('registerBtn').addEventListener('click', async () => {
+        const email = document.getElementById('regEmail').value.trim();
+        const pass = document.getElementById('regPassword').value;
+        if (!email || !pass) return alert("Please provide both email and password.");
+        try {
+          const response = await fetch(`${API_URL}/auth/signup`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password: pass, role: regSelectedRole })
+          });
+          if(response.ok) {
+            alert("Registration successful! You can now log in.");
+            document.getElementById('regEmail').value = ''; document.getElementById('regPassword').value = '';
+            registerSection.style.display = 'none'; loginSection.style.display = 'block';
+            document.getElementById('userid').value = email; document.getElementById('password').value = '';
+          } else { alert("Registration failed."); }
+        } catch { alert("Server error. Using offline mode."); }
+      });
+
+      document.getElementById('loginBtn').addEventListener('click', () => {
+        localStorage.setItem('inventory_token', 'demo-token');
+        window.location.reload();
+      });
+
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.removeItem('inventory_token');
+        window.location.reload();
+      });
+      document.querySelectorAll('#otpMock').forEach(el => el.addEventListener('click', () => alert('📱 Password reset via OTP initiated')));
+
+      // ========== MAIN APP ==========
+      if (token) {
+        authPanel.style.display = 'none';
+        mainApp.style.display = 'block';
+
+        renderProducts();
+        renderLedger(localDB.ledger);
+        
+        // Chart
+        const ctx = document.getElementById('stockChart');
+        if (ctx) {
+          new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], datasets: [{ label: 'Receipts', data: [40, 55, 30, 80, 60, 90, 110], borderColor: '#2e7d32', backgroundColor: '#2e7d3220', fill: true, tension: 0.4 }, { label: 'Deliveries', data: [20, 60, 45, 50, 75, 40, 65], borderColor: '#d32f2f', backgroundColor: '#d32f2f20', fill: true, tension: 0.4 }] },
+            options: { responsive: true, maintainAspectRatio: false }
+          });
+        }
+
+        fetchProductsFromAPI();
+        fetchLedgerFromAPI();
+      }
+
+      // ========== NAVIGATION ==========
+      const navItems = document.querySelectorAll('.nav-item, .sub-item');
+      const sections = {
+        dashboard: document.getElementById('dashboard'),
+        products: document.getElementById('products'),
+        receipts: document.getElementById('receipts'),
+        deliveries: document.getElementById('deliveries'),
+        adjustments: document.getElementById('adjustments'),
+        transfers: document.getElementById('transfers'),
+        movehistory: document.getElementById('movehistory'),
+        warehouse: document.getElementById('warehouse'),
+        settings: document.getElementById('settings'),
+        profileView: document.getElementById('profileView')
+      };
+
+      function setActiveView(viewId) {
+        Object.values(sections).forEach(s => s?.classList.remove('active-section'));
+        navItems.forEach(el => el.classList.remove('active'));
+        if (sections[viewId]) sections[viewId].classList.add('active-section');
+        let activeElement = document.querySelector(`[data-view="${viewId}"]`);
+        if (activeElement) activeElement.classList.add('active');
+        
+        if (viewId === 'products') renderProducts();
+        if (viewId === 'movehistory') renderLedger(localDB.ledger);
+        if (viewId === 'receipts') renderLedger(localDB.ledger);
+        if (viewId === 'dashboard') { renderProducts(); renderLedger(localDB.ledger); }
+      }
+
+      navItems.forEach(item => { item.addEventListener('click', () => { const view = item.getAttribute('data-view'); if (view) setActiveView(view); }); });
+      document.getElementById('myProfileBtn').addEventListener('click', () => setActiveView('profileView'));
+      
+      const mobileToggle = document.getElementById('mobileToggle');
+      const sidebar = document.getElementById('sidebar');
+      if (mobileToggle) mobileToggle.addEventListener('click', () => { sidebar.classList.toggle('open'); });
+      navItems.forEach(item => { item.addEventListener('click', () => { if (window.innerWidth <= 768) sidebar.classList.remove('open'); }); });
+
+      // ========== RENDER FUNCTIONS ==========
+      function renderProducts() {
+        const tbody = document.getElementById('productTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        
+        let lowStockCount = 0;
+        let lowStockHtml = '';
+
+        globalProducts.forEach(p => {
+          const main = p.stock && p.stock['Main Store'] ? parseInt(p.stock['Main Store']) : 0;
+          const rack = p.stock && p.stock['Production Rack'] ? parseInt(p.stock['Production Rack']) : 0;
+          const total = main + rack;
+          const reorder = p.reorder_rule || 10;
+          
+          if (total <= reorder) {
+            lowStockCount++;
+            lowStockHtml += `<tr><td><strong>${p.name}</strong><br><span style="color:#777; font-size:12px;">${p.sku}</span></td><td><span style="color:#d32f2f; font-weight:bold; font-size:16px;">${total}</span> <span style="font-size:12px;">(Min ${reorder})</span></td><td><button class="btn btn-sm btn-outline">Reorder</button></td></tr>`;
+          }
+
+          const row = document.createElement('tr');
+          row.innerHTML = `<td><strong>${p.name}</strong><br><span style="color:#777;">SKU: ${p.sku}</span></td><td><span class="badge">${p.category || 'N/A'}</span></td><td>${p.unit || 'pcs'}</td><td>📍 Main Store: ${main}<br>📍 Prod Rack: ${rack}</td><td>min ${reorder}</td><td><i class="fas fa-edit" style="color:#d32f2f; cursor:pointer;"></i></td>`;
+          tbody.appendChild(row);
+        });
+        
+        document.getElementById('totalProducts').innerText = globalProducts.length;
+        document.getElementById('lowStockKpi').innerText = lowStockCount;
+        const lsBody = document.getElementById('dashboardLowStock');
+        if(lsBody) lsBody.innerHTML = lowStockHtml || '<tr><td colspan="3" style="text-align:center;">Stock is healthy.</td></tr>';
+        
+        populateProductDropdowns();
+      }
+
+      function renderLedger(logs) {
+        document.getElementById('totalLogs').innerText = logs.length;
+        
+        // Move History list (all logs)
+        const container = document.getElementById('moveHistoryList');
+        if (container) {
+          container.innerHTML = '';
+          logs.forEach(l => {
+            const div = document.createElement('div'); div.className = 'move-item';
+            div.innerHTML = `<span><i class="fas fa-arrow-right"></i> ${new Date(l.time).toLocaleString()} – [${l.type}] ${l.desc}</span> <span class="badge">${l.status || 'Done'}</span>`;
+            container.appendChild(div);
+          });
+        }
+
+        // Dashboard Security Log (latest 4)
+        const dashLog = document.getElementById('dashboardAuditLog');
+        if(dashLog) dashLog.innerHTML = logs.slice(0, 4).map(l => `<li><span class="time">${new Date(l.time).toLocaleString()}</span><strong>${l.type}</strong>: ${l.desc}</li>`).join('');
+
+        // Receipts tab – only Receipt entries
+        const tbody = document.getElementById('receiptsTableBody');
+        if (tbody) {
+          const receiptLogs = logs.filter(log => log.type === 'Receipt').slice(0, 10);
+          if (receiptLogs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No receipts yet</td></tr>';
+          } else {
+            tbody.innerHTML = receiptLogs.map(log => {
+              const date = new Date(log.time).toLocaleString();
+              let supplier = 'N/A', product = 'Unknown', qty = '?';
+              const desc = log.desc || '';
+              const qtyMatch = desc.match(/[+-](\d+)/);
+              if (qtyMatch) qty = qtyMatch[1];
+              if (desc.includes('from')) supplier = desc.split('from')[1]?.split(':')[0]?.trim() || 'N/A';
+              const prodMatch = globalProducts.find(p => p.id === log.productId);
+              product = prodMatch ? prodMatch.name : `ID: ${log.productId}`;
+              return `<tr><td>${date}</td><td>${product}</td><td>+${qty}</td><td>${supplier}</td><td>${log.location || ''}</td></tr>`;
+            }).join('');
+          }
+        }
+      }
+
+      function populateProductDropdowns() {
+        const selects = ['receiptProduct', 'deliveryProduct', 'adjustProduct', 'transferProduct'];
+        selects.forEach(id => {
+          const sel = document.getElementById(id);
+          if (sel) sel.innerHTML = globalProducts.map(p => `<option value="${p.id}">${p.name} (${p.sku})</option>`).join('');
+        });
+      }
+
+      async function fetchProductsFromAPI() {
+        try {
+          const res = await fetch(`${API_URL}/products`, { headers: { 'Authorization': `Bearer ${token}` } });
+          const products = await res.json();
+          if (products.length) globalProducts = products;
+        } catch { /* keep local */ }
+        renderProducts();
+      }
+
+      async function fetchLedgerFromAPI() {
+        try {
+          const res = await fetch(`${API_URL}/inventory/ledger`, { headers: { 'Authorization': `Bearer ${token}` } });
+          const logs = await res.json();
+          if (logs.length) localDB.ledger = logs;
+        } catch { /* keep local */ }
+        renderLedger(localDB.ledger);
+      }
+
+      // ========== MODAL HANDLING ==========
+      const modals = {
+        product: document.getElementById('productModal'),
+        receipt: document.getElementById('receiptModal'),
+        delivery: document.getElementById('deliveryModal'),
+        adjustment: document.getElementById('adjustmentModal'),
+        transfer: document.getElementById('transferModal')
+      };
+
+      function closeAllModals() { 
+        Object.values(modals).forEach(m => m?.classList.remove('active')); 
+        document.getElementById('receiptPdfSection').style.display = 'none';
+      }
+      
+      window.addEventListener('click', (e) => { if (e.target.classList.contains('modal')) closeAllModals(); });
+      document.getElementById('closeProductModal')?.addEventListener('click', closeAllModals);
+      document.getElementById('closeReceiptModal')?.addEventListener('click', closeAllModals);
+      document.getElementById('closeDeliveryModal')?.addEventListener('click', closeAllModals);
+      document.getElementById('closeAdjustModal')?.addEventListener('click', closeAllModals);
+      document.getElementById('closeTransferModal')?.addEventListener('click', closeAllModals);
+
+      // Open modal buttons
+      document.getElementById('btnDashReceipt')?.addEventListener('click', () => { populateProductDropdowns(); modals.receipt.classList.add('active'); });
+      document.getElementById('btnDashDelivery')?.addEventListener('click', () => { populateProductDropdowns(); modals.delivery.classList.add('active'); });
+      document.getElementById('btnDashAdjust')?.addEventListener('click', () => { populateProductDropdowns(); modals.adjustment.classList.add('active'); });
+
+      document.getElementById('openCreateProductModal')?.addEventListener('click', () => modals.product.classList.add('active'));
+      document.getElementById('openReceiptModal')?.addEventListener('click', () => { populateProductDropdowns(); modals.receipt.classList.add('active'); });
+      document.getElementById('openDeliveryModal')?.addEventListener('click', () => { populateProductDropdowns(); modals.delivery.classList.add('active'); });
+      document.getElementById('openAdjustmentModal')?.addEventListener('click', () => { populateProductDropdowns(); modals.adjustment.classList.add('active'); });
+      document.getElementById('openTransferModal')?.addEventListener('click', () => { populateProductDropdowns(); modals.transfer.classList.add('active'); });
+
+      // ========== OPERATIONS ==========
+      async function executeOp(payload) {
+        // Try API, fallback to local simulation
+        try {
+          const res = await fetch(`${API_URL}/inventory/transaction`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (res.ok) { 
+            fetchProductsFromAPI(); 
+            fetchLedgerFromAPI(); 
+            return true; 
+          }
+        } catch { /* fallback to local */ }
+
+        // Local simulation
+        const product = globalProducts.find(p => p.id === payload.productId);
+        if (!product) { alert('Product not found'); return false; }
+
+        if (payload.type === 'Receipt') {
+          if (!product.stock[payload.location]) product.stock[payload.location] = 0;
+          product.stock[payload.location] += payload.qty;
+        } else if (payload.type === 'Delivery') {
+          if (!product.stock[payload.location] || product.stock[payload.location] < payload.qty) {
+            alert('Insufficient stock');
+            return false;
+          }
+          product.stock[payload.location] -= payload.qty;
+        } else if (payload.type === 'Transfer') {
+          if (!product.stock[payload.location] || product.stock[payload.location] < payload.qty) {
+            alert('Insufficient stock at source');
+            return false;
+          }
+          product.stock[payload.location] -= payload.qty;
+          if (!product.stock[payload.targetLocation]) product.stock[payload.targetLocation] = 0;
+          product.stock[payload.targetLocation] += payload.qty;
+        } else if (payload.type === 'Adjustment') { // we use type Receipt/Delivery for adjustments
+          // handled by the calling code (already uses Receipt/Delivery)
+        }
+
+        const ledgerEntry = {
+          id: 'l' + Date.now(),
+          time: new Date().toISOString(),
+          type: payload.type,
+          desc: payload.description || `${payload.type} of ${payload.qty}`,
+          productId: payload.productId,
+          location: payload.location || '',
+          targetLocation: payload.targetLocation || '',
+          status: 'Done'
+        };
+        localDB.ledger.unshift(ledgerEntry);
+        renderProducts();
+        renderLedger(localDB.ledger);
+        return true;
+      }
+
+      // Receipt
+      document.getElementById('validateReceiptBtn')?.addEventListener('click', async () => {
+        const productId = document.getElementById('receiptProduct').value;
+        const qty = parseInt(document.getElementById('receiptQty').value) || 0;
+        const location = document.getElementById('receiptLocation').value;
+        const supplier = document.getElementById('receiptSupplier').value || 'Unknown Vendor';
+        const success = await executeOp({ type: 'Receipt', productId, qty, location, description: `Receipt from ${supplier}: +${qty} to ${location}` });
+        if (success) {
+          alert("Receipt Processed!");
+          const prodName = document.getElementById('receiptProduct').options[document.getElementById('receiptProduct').selectedIndex].text;
+          window.lastReceipt = { supplier, productName: prodName, quantity: qty, location, date: new Date().toLocaleDateString() };
+          document.getElementById('receiptPdfSection').style.display = 'block';
+          renderLedger(localDB.ledger); // immediate update
+        }
+      });
+
+      // Delivery
+      document.getElementById('validateDeliveryBtn')?.addEventListener('click', async () => {
+        const productId = document.getElementById('deliveryProduct').value;
+        const qty = parseInt(document.getElementById('deliveryQty').value) || 0;
+        const location = document.getElementById('deliveryLocation').value;
+        const customer = document.getElementById('deliveryCustomer').value || 'Customer';
+        const success = await executeOp({ type: 'Delivery', productId, qty, location, description: `Delivery to ${customer}: -${qty} from ${location}` });
+        if (success) { 
+          alert("Delivery Processed!"); 
+          renderLedger(localDB.ledger); 
+          closeAllModals(); 
+        }
+      });
+
+      // Transfer
+      document.getElementById('validateTransferBtn')?.addEventListener('click', async () => {
+        const productId = document.getElementById('transferProduct').value;
+        const qty = parseInt(document.getElementById('transferQty').value) || 0;
+        const location = document.getElementById('transferFrom').value;
+        const targetLocation = document.getElementById('transferTo').value;
+        if(location === targetLocation) return alert("Locations must be different.");
+        const success = await executeOp({ type: 'Transfer', productId, qty, location, targetLocation, description: `Transfer ${qty} units: ${location} -> ${targetLocation}` });
+        if (success) { 
+          alert("Transfer Processed!"); 
+          renderLedger(localDB.ledger); 
+          closeAllModals(); 
+        }
+      });
+
+      // Adjustment
+      document.getElementById('validateAdjustBtn')?.addEventListener('click', async () => {
+        const productId = document.getElementById('adjustProduct').value;
+        const qty = parseInt(document.getElementById('adjustCount').value) || 0;
+        const location = document.getElementById('adjustLocation').value;
+        const type = qty >= 0 ? 'Receipt' : 'Delivery';
+        const absQty = Math.abs(qty);
+        const success = await executeOp({ type: type, productId, qty: absQty, location, description: `Manual Adjustment at ${location}: ${qty > 0 ? '+' : '-'}${absQty}` });
+        if (success) { 
+          alert("Adjustment Processed!"); 
+          renderLedger(localDB.ledger); 
+          closeAllModals(); 
+        }
+      });
+
+      // Save product
+      document.getElementById('saveProductBtn')?.addEventListener('click', async () => {
+        const payload = {
+          name: document.getElementById('prodName').value,
+          sku: document.getElementById('prodSKU').value,
+          category: document.getElementById('prodCategory').value,
+          unit: document.getElementById('prodUnit').value,
+          initial_stock: parseInt(document.getElementById('prodStock').value) || 0,
+          reorder_rule: parseInt(document.getElementById('prodReorder').value) || 10
+        };
+        if (!payload.name || !payload.sku) return alert('Name and SKU required');
+        
+        try {
+          const res = await fetch(`${API_URL}/products`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if(res.ok) { closeAllModals(); fetchProductsFromAPI(); fetchLedgerFromAPI(); } 
+          else alert("Failed to save product.");
+        } catch {
+          // Local save
+          const newProduct = {
+            id: 'p' + Date.now(),
+            name: payload.name,
+            sku: payload.sku,
+            category: payload.category,
+            unit: payload.unit,
+            reorder_rule: payload.reorder_rule,
+            stock: { 'Main Store': payload.initial_stock, 'Production Rack': 0 }
+          };
+          globalProducts.push(newProduct);
+          localDB.products = globalProducts;
+          closeAllModals();
+          renderProducts();
+          alert('Product saved locally.');
+        }
+      });
+
+      // PDF generation
+      document.getElementById('generateReceiptPDF')?.addEventListener('click', function() {
+        const data = window.lastReceipt;
+        if(!data) return;
+        const { jsPDF } = window.jspdf; const doc = new jsPDF(); const pageWidth = doc.internal.pageSize.getWidth();
+        doc.setFillColor(44, 15, 20); doc.rect(0, 0, pageWidth, 40, 'F');
+        doc.setTextColor(255, 255, 255); doc.setFontSize(26); doc.setFont('helvetica', 'bold'); doc.text('CoreInventory', 15, 25);
+        doc.setFontSize(16); doc.setFont('helvetica', 'normal'); doc.text('OFFICIAL RECEIPT', pageWidth - 15, 25, { align: 'right' });
+        doc.setTextColor(80, 80, 80); doc.setFontSize(10); doc.text('123 Logistics Way\nWarehouse District, WH 90210\ncontact@coreinventory.com', 15, 50);
+        doc.setFont('helvetica', 'bold'); doc.setTextColor(40, 40, 40); doc.text('RECEIPT TO:', 15, 75); doc.text('Date:\nLocation:', pageWidth - 70, 75);
+        doc.setFont('helvetica', 'normal'); doc.text(data.supplier, 15, 82); doc.text(`${data.date}\n${data.location}`, pageWidth - 15, 75, { align: 'right' });
+        const startY = 105; doc.setFillColor(240, 240, 240); doc.rect(15, startY, pageWidth - 30, 12, 'F');
+        doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.text('ITEM DESCRIPTION', 20, startY + 8); doc.text('QTY', 150, startY + 8);
+        doc.setFont('helvetica', 'normal'); doc.text(data.productName, 20, startY + 20); doc.text(data.quantity.toString(), 150, startY + 20);
+        doc.setDrawColor(200, 200, 200); doc.line(15, startY + 25, pageWidth - 15, startY + 25);
+        doc.setFont('helvetica', 'bold'); doc.setTextColor(40, 40, 40); doc.text('TOTAL RECEIVED:', 110, startY + 35); doc.text(`${data.quantity}`, 150, startY + 35);
+        doc.setDrawColor(0, 0, 0); doc.line(15, 250, 75, 250); doc.setFontSize(10); doc.text('Authorized Signature', 15, 255);
+        doc.setTextColor(150, 150, 150); doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.text('System generated receipt. No physical signature required.', pageWidth / 2, 280, { align: 'center' });
+        doc.save(`CoreInventory_Receipt_${Date.now()}.pdf`);
+      });
+
+      // Settings save
+      document.getElementById('saveSettingsBtn')?.addEventListener('click', function() {
+        const company = document.getElementById('companyName').value;
+        const warehouse = document.getElementById('defaultWarehouse').value;
+        const threshold = document.getElementById('globalThreshold').value;
+        const email = document.getElementById('emailNotify').checked;
+        const lang = document.getElementById('language').value;
+        const capacityAlert = document.getElementById('capacityAlert').value;
+        alert(`Settings saved!\nCompany: ${company}\nDefault Warehouse: ${warehouse}\nThreshold: ${threshold}\nNotifications: ${email}\nLanguage: ${lang}\nCapacity Alert: ${capacityAlert}%`);
+      });
+    })();
+  </script>
+</body>
+</html>
