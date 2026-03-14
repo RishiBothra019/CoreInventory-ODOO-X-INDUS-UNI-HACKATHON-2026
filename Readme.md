@@ -99,3 +99,29 @@ CoreInventoryApp/
 ├── .gitignore                # Tells Git which files to hide
 └── README.md                 # Project documentation
 ```
+
+
+NOTE:- 
+
+Unlike projects that rely on generic Backend-as-a-Service (BaaS) platforms, CoreInventory operates on a custom-built RESTful API and integrates seamlessly with native and third-party web APIs to deliver a full enterprise experience.
+
+1. Custom REST API (Node.js & Express)
+The core of the application is a dedicated backend API built from scratch to securely handle PostgreSQL database transactions. Key endpoint structures include:
+• /api/auth/*: Handles secure user onboarding and authentication using bcrypt and issues JSON Web Tokens (JWT).
+• /api/products/*: Manages the CRUD operations for the master asset catalog and calculates real-time stock levels using PostgreSQL aggregate functions.
+• /api/inventory/transaction: The operational engine that uses ACID-compliant database transactions to simultaneously update stock quantities and write to the immutable audit ledger.
+• /api/inventory/ledger: Serves paginated, chronological audit trails for the dashboard and history views.
+
+
+2. Native Web APIs
+The frontend consumes the custom backend using modern, built-in browser APIs to ensure a lightweight footprint:
+• Fetch API: Utilized for all asynchronous HTTP requests (GET, POST) to ensure the UI updates instantly without requiring page reloads.
+• Web Storage API: localStorage is used to securely persist the user's JWT, maintaining their authenticated session across the application.
+• DOM API: Heavily leveraged to dynamically construct tables, update KPI metrics, and trigger UI state changes the millisecond data is returned from the server.
+
+
+3. Third-Party Integrations
+To enhance data visualization and reporting, the application consumes external libraries via CDNs:
+• Chart.js API: Transforms raw numerical stock arrays from the database into responsive, interactive line charts on the main dashboard.
+• jsPDF API: Programmatically draws text, lines, and transactional variables onto a canvas to generate downloadable, formatted PDF manifests directly in the client's browser.
+
